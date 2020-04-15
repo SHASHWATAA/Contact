@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@0.7.0"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@0.7.4"></script>
+
+</head>
+<body>
+    <div style=""><div style=""><canvas id = 'contactLaterChart'></canvas></div></div>
+
+    <script type="text/javascript">
+
+        $.getJSON('http://thetriangularflag.tk/Contact/', function(JSONdata) {graphIt(JSONdata)});
+
+        Chart.scaleService.updateScaleDefaults('logarithmic', {
+          ticks: {
+            callback: function(tick, index, ticks) {
+                return tick.toLocaleString()
+            }}});
+
+        function updateContactDate(index, JSONdata){
+            Name_ID = JSONdata['contact_later'][index]['Name_ID'];
+            const Name =  JSONdata['contact_later'][index]['Name'];
+            if (confirm(`Are you sure you want to update ${Name}'s contact date to today? `)) {
+                window.open(`http://thetriangularflag.tk/Contact/update.php?Name_ID=${Name_ID}`) 
+            } else {
+                // 
+            }
+        };
+
+
+        function graphIt(JSONdata){
+            toContactGraphData = []
+            contactLaterGraphData = []
+
+            contactLatergraphLables = [];
+            toContactGraphLables = [];
+
+            for (var i = 0; i < JSONdata['contact_later'].length; i++) {
+                contactInDays = JSONdata['contact_later'][i]['Contact in(days)'];
+                contactDueFor = JSONdata['contact_later'][i]['Contact due in(days)'];
+                // contactDueFor = JSONdata['contact_later'][i]['Name_ID'];
+                Priority_ID = JSONdata['contact_later'][i]['Priority_ID'];
+
+                Priority = (contactDueFor/contactInDays);
+                Name = JSONdata['contact_later'][i]['Name'];
+                function map(value, in_min, in_max, out_min, out_max) {
+                    return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+                };
+
+
+                contactLaterGraphData.push({x:(map(Priority,1,0,1,0)),y:(map(contactDueFor,1,370,1,370)),r:(1/(Priority_ID)*20)});
+                contactLatergraphLables.push(Name)
+            }
+
+
+            var contactLaterChart = document.getElementById('contactLaterChart').getContext('2d');
+            var scatterChart = new Chart(contactLaterChart, {type: 'bubble',
+                data:{labels: contactLatergraphLables,
+                    datasets: [{label: 'Contact Later',data:contactLaterGraphData ,backgroundColor: 'rgba(55, 178, 0, 1)',datalabels: {align: 'right',anchor: 'end',offset:5}}]},
+                    options: {tooltips: {callbacks: {label: function(t, d) {return ': (Days left:' + t.yLabel + ')';}}},
+                    onClick: function(e) {var element = this.getElementAtEvent(e); if (element.length > 0) {updateContactDate(element[0]._index,JSONdata)}},
+                    scales: {xAxes: [{type: 'linear',position: 'bottom', offset: true}], yAxes: [{type: 'logarithmic',offset: true}]  },
+                    plugins: {zoom: {pan: {enabled: true},zoom: {enabled: true,drag: false,speed: 0.1}},datalabels: {formatter: function(value, context) {return context.chart.data.labels[context.dataIndex];}}} }});
+        }
+
+
+    </script>
+</body>
+</html>
+
